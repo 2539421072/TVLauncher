@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TVLauncher</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="motion.css">
+  <link rel="stylesheet" href="tablet.css">
+  <link rel="stylesheet" href="tv.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-left">
+      <button id="btn-settings" class="icon-button" type="button" title="设置" aria-label="设置">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7zm7.4-2.2l1.7-1.3-1.7-2.9-2 .7a7.6 7.6 0 0 0-1.4-.8l-.3-2.1h-3.4l-.3 2.1c-.5.2-1 .5-1.4.8l-2-.7L6.9 12l1.7 1.3a7.7 7.7 0 0 0 0 1.5L6.9 16l1.7 2.9 2-.7c.4.3.9.6 1.4.8l.3 2.1h3.4l.3-2.1c.5-.2 1-.5 1.4-.8l2 .7 1.7-2.9-1.7-1.3a7.7 7.7 0 0 0 0-1.5z"/>
+        </svg>
+      </button>
+      <div class="mode-switch" id="mode-switch" role="group" aria-label="模式">
+        <button type="button" data-mode="tv">TV</button>
+        <button type="button" data-mode="tablet">平板</button>
+      </div>
+      <span class="badge" id="bridge-state">连接中…</span>
+    </div>
+
+    <!-- The clock occupies its own middle zone rather than being pushed to the right, so it stays
+         centred whatever the left cluster's width happens to be. Its size and position are both
+         settings. -->
+    <div class="topbar-centre" id="clock-box">
+      <span class="clock" id="clock">--:--</span>
+      <span class="date" id="date"></span>
+    </div>
+
+    <div class="topbar-right">
+      <button id="btn-exit" class="icon-button" type="button" title="退出桌面" aria-label="退出桌面">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M10.1 3.6a1 1 0 0 1 0 2H6.5A1.5 1.5 0 0 0 5 7.1v9.8A1.5 1.5 0 0 0 6.5 18.4h3.6a1 1 0 0 1 0 2H6.5A3.5 3.5 0 0 1 3 16.9V7.1a3.5 3.5 0 0 1 3.5-3.5h3.6z"/>
+          <path d="M14.3 7.3a1 1 0 0 1 1.4 0l3.6 3.6a1.5 1.5 0 0 1 0 2.1l-3.6 3.6a1 1 0 1 1-1.4-1.4l2.3-2.3H9.4a1 1 0 1 1 0-2h7.2l-2.3-2.3a1 1 0 0 1 0-1.4z"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <main id="stage" class="stage"></main>
+
+  <!-- Shown while the app list and icons are loading, and when the folder is empty. -->
+  <div id="hint" class="hint" hidden></div>
+
+  <!--
+    Exiting hands the desktop back to Windows, which is not something to do by accident with a
+    remote in your hand, so it is always confirmed.
+  -->
+  <div id="exit-confirm" class="confirm" hidden>
+    <div class="confirm-box">
+      <h2>退出 TVLauncher？</h2>
+      <p>Windows 桌面会恢复显示。</p>
+      <div class="confirm-actions">
+        <button id="exit-no" type="button" class="ghost">取消</button>
+        <button id="exit-yes" type="button">退出</button>
+      </div>
+    </div>
+  </div>
+
+  <!--
+    Surfaces a script error on screen.
+
+    A module that throws leaves the page looking alive but inert, which is indistinguishable from a
+    host that stopped answering. Reporting the first error makes that impossible to miss.
+  -->
+  <script>
+    function reportFailure(text) {
+      const hint = document.getElementById('hint');
+      if (!hint) return;
+      hint.hidden = false;
+      hint.textContent = text;
+      hint.style.whiteSpace = 'pre-wrap';
+      hint.style.zIndex = '9999';
+    }
+
+    window.addEventListener('error', (e) => {
+      reportFailure('脚本错误: ' + (e.message || e.error) +
+        '\n' + (e.filename || '') + ':' + (e.lineno || ''));
+    });
+
+    window.addEventListener('unhandledrejection', (e) => {
+      reportFailure('未处理的异常: ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
+    });
+  </script>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

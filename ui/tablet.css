@@ -1,0 +1,189 @@
+/*
+ * Tablet mode.
+ *
+ * Every geometric value is a CSS variable written by the settings panel, so what the user drags is
+ * literally what the browser lays out. There is no second calculation that can disagree with it.
+ */
+
+.tablet-viewport {
+  position: absolute;
+  inset: var(--stage-top) var(--stage-side) var(--stage-bottom);
+  overflow: hidden;
+}
+
+.tablet-track {
+  display: flex;
+  height: 100%;
+  will-change: transform;
+}
+
+.tablet-grid {
+  flex: 0 0 100%;
+  width: 100%;
+  height: 100%;
+
+  display: grid;
+  /* Columns come from the settings. Rows are 1fr so the grid fills the height instead of
+     clustering at the top, which is what leaves the whole screen looking used. */
+  grid-template-columns: repeat(var(--cols, 6), minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+  column-gap: var(--col-gap, 32px);
+  row-gap: var(--row-gap, 44px);
+
+  align-content: center;
+  justify-items: center;
+  align-items: center;
+
+  padding: 8px 0;
+}
+
+/* ------------------------------------------------------------------ a tile */
+
+.app-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+
+  /* The tile is only as big as its content, so the grid's own centring provides the spacing.
+     Sizing the tile to the cell instead is what made everything look cramped. */
+  width: var(--card-size, 128px);
+  max-width: 100%;
+
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.app-plate {
+  width: var(--card-size, 128px);
+  height: var(--card-size, 128px);
+  border-radius: var(--card-radius, 26px);
+
+  display: grid;
+  place-items: center;
+
+  /* Scale from the middle, so the press feedback grows and shrinks around the icon's own centre
+     rather than around a corner. */
+  transform-origin: center center;
+
+  transition: transform 140ms ease, box-shadow 140ms ease;
+}
+
+/* The white plate can be turned off, in which case the icon sits directly on the wallpaper. */
+.tablet-stage[data-show-plate="yes"] .app-plate {
+  background: #ffffff;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.32);
+}
+
+.tablet-stage[data-show-plate="no"] .app-plate {
+  background: transparent;
+  box-shadow: none;
+}
+
+.app-glyph {
+  display: grid;
+  place-items: center;
+  width: var(--icon-size, 88px);
+  height: var(--icon-size, 88px);
+  font-size: calc(var(--icon-size, 88px) * 0.5);
+  color: #4a5568;
+  font-weight: 600;
+}
+
+.app-glyph img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  /* Icons are authored at many sizes; letting the browser smooth them beats a forced pixel grid. */
+  image-rendering: auto;
+}
+
+/*
+ * Custom artwork.
+ *
+ * In this mode a picture replaces the icon *and* its white plate: the tile becomes the picture.
+ * That differs from TV mode, where the picture is a background with the icon still on top of it.
+ */
+.app-tile[data-has-art="yes"] .app-plate {
+  background-image: var(--tile-art);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-color: transparent;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.32);
+}
+
+.app-tile[data-has-art="yes"] .app-glyph {
+  /* The icon is replaced, not layered. */
+  display: none;
+}
+
+.app-caption {
+  font-size: var(--caption-size, 15px);
+  color: #eef1f7;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.app-tile:hover .app-plate,
+.app-tile:focus-visible .app-plate {
+  transform: translateY(-3px) scale(1.05);
+}
+
+.app-tile:focus-visible { outline: none; }
+
+/*
+ * The cursor is what the remote moves. It uses the same accent ring as the TV cards and the bar
+ * buttons, so "this is what Enter will activate" looks identical everywhere.
+ */
+.app-tile.is-cursor .app-plate {
+  outline: 4px solid #4c8dff;
+  outline-offset: 3px;
+  transform: translateY(-3px) scale(1.06);
+}
+
+.app-tile.is-cursor .app-caption {
+  color: #ffffff;
+}
+
+.app-tile.is-broken { opacity: 0.45; }
+
+.app-tile.is-broken .app-plate {
+  /* A dashed edge reads as "this is not really here" without needing text. */
+  outline: 2px dashed #ffffff59;
+  outline-offset: -6px;
+}
+
+/* ------------------------------------------------------------------ page dots */
+
+.page-dots {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 18px;
+
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.page-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #ffffff3d;
+  transition: background 160ms ease, transform 160ms ease;
+}
+
+.page-dot[data-active="yes"] {
+  background: #ffffff;
+  transform: scale(1.25);
+}

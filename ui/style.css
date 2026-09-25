@@ -1,0 +1,909 @@
+/* Shell: background, top bar, mode switch, settings panel, hint. */
+
+:root {
+  --bg: #10121c;
+  --fg: #f2f4f8;
+  --fg-dim: #9aa3b8;
+  --accent: #4c8dff;
+
+  /* Space reserved for the chrome, so both stages position themselves the same way. */
+  --topbar-height: 104px;
+  --stage-top: var(--topbar-height);
+  --stage-side: 56px;
+  --stage-bottom: 64px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: "Microsoft YaHei UI", "Segoe UI", system-ui, sans-serif;
+  user-select: none;
+  cursor: default;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  background-image: radial-gradient(120% 90% at 50% 0%, #1d2438 0%, var(--bg) 62%);
+}
+
+/* ------------------------------------------------------------------ top bar */
+
+.topbar {
+  height: var(--topbar-height);
+  flex: 0 0 auto;
+
+  display: grid;
+  /* Three zones, so the bar's own layout does not depend on how wide the left cluster grows. */
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 0 40px;
+  gap: 20px;
+
+  /* The bar sits above the stage so its buttons are never covered by content. */
+  position: relative;
+  z-index: 600;
+}
+
+.topbar-left {
+  /* Pinned to its column rather than auto-placed: the middle column is hidden in the tablet mode,
+     and an auto-placed third child would then slide into the middle instead of staying right. */
+  grid-column: 1;
+  justify-self: start;
+
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* The right zone holds the exit button, pinned to the last column for the same reason. */
+.topbar-right {
+  grid-column: 3;
+  justify-self: end;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+
+  /* Above the clock's layer: a large clock can otherwise overlap the corner. */
+  position: relative;
+  z-index: 600;
+}
+
+/*
+ * The clock keeps its place in the grid so the bar still has three real columns: an absolutely
+ * positioned middle would collapse its column and slide the exit button into the centre.
+ *
+ * The settings offsets are applied as a translate on top of its column, which keeps it centred on
+ * the point the user chose without taking it out of the layout.
+ */
+/*
+ * The horizontal offset is a pixel value computed in JS against the window width, not a percentage.
+ *
+ * A percentage inside `translate` resolves against the element's own width, so 95% moved a 200px
+ * clock by only 90px and the slider appeared to do almost nothing. Pixels against the window give
+ * the slider the meaning it looks like it has: 0% is the left edge, 100% is the right.
+ */
+.topbar-centre {
+  grid-column: 2;
+  justify-self: center;
+
+  translate: var(--clock-x, 0px) var(--clock-offset-y, 0px);
+
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 12px;
+  line-height: 1.1;
+
+  /* Above the stage content, so moving the clock down never puts it behind the cards. */
+  z-index: 500;
+  pointer-events: none;
+  white-space: nowrap;
+
+  /* A large clock overflows its column rather than stretching the bar: the bar's height is fixed
+     and the clock's size is the user's choice. */
+  overflow: visible;
+}
+
+.clock {
+  font-size: var(--clock-size, 40px);
+  font-weight: 600;
+  color: var(--fg);
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.55);
+}
+
+.date {
+  font-size: calc(var(--clock-size, 40px) * 0.36);
+  color: var(--fg-dim);
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.55);
+}
+
+/*
+ * The clock belongs to the TV mode only.
+ *
+ * The grid fills the screen with tiles and already carries its own page indicator, so a large clock
+ * over it competes for attention without adding anything. Hiding it rather than hiding the whole
+ * bar keeps the settings and mode buttons reachable.
+ */
+body[data-mode="tablet"] .topbar-centre {
+  display: none;
+}
+
+.badge {
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: #ffffff14;
+  color: var(--fg-dim);
+  white-space: nowrap;
+}
+
+.badge[data-ok="yes"] { background: #2ea04326; color: #7ee2a8; }
+.badge[data-ok="no"] { background: #f8514926; color: #ff9c96; }
+
+.icon-button {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 12px;
+  background: #ffffff12;
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.icon-button:hover { background: #ffffff22; }
+.icon-button svg { width: 22px; height: 22px; fill: currentColor; }
+
+.mode-switch {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 12px;
+  background: #ffffff10;
+}
+
+.mode-switch button {
+  border: 0;
+  border-radius: 9px;
+  padding: 8px 20px;
+  font: inherit;
+  font-size: 14px;
+  background: transparent;
+  color: var(--fg-dim);
+  cursor: pointer;
+}
+
+.mode-switch button[data-active="yes"] {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* ------------------------------------------------------------------ stage */
+
+.stage {
+  flex: 1 1 auto;
+  position: relative;
+  min-height: 0;
+}
+
+/* ------------------------------------------------------------------ hint */
+
+.hint {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+
+  max-width: 820px;
+  padding: 28px 34px;
+  border-radius: 20px;
+  background: #0b0e17f2;
+  border: 1px solid #ffffff14;
+
+  text-align: center;
+  line-height: 1.7;
+  color: var(--fg-dim);
+
+  /* Above the stage and the settings panel: a hint is a blocking message, and one that renders
+     behind the tiles cannot be read. */
+  z-index: 2000;
+}
+
+.hint code {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: #00000038;
+  color: var(--fg);
+  font-size: 13px;
+  word-break: break-all;
+}
+
+/* ------------------------------------------------------------------ frosted glass */
+
+/*
+ * One glass treatment, shared by every floating surface: the settings panel, the picture picker
+ * and the exit confirmation.
+ *
+ * It is defined once as variables so the three cannot drift apart as the design changes, which is
+ * what makes them read as the same material rather than three similar greys.
+ *
+ * The blur is what does the work. The translucent fill on its own would just look like a faded
+ * panel; it is the blurred content behind it that makes the surface feel like glass. A slight
+ * saturation boost keeps the colours behind the glass from turning muddy.
+ */
+:root {
+  --glass-blur: 26px;
+  --glass-saturate: 150%;
+
+  /* Dark enough to keep white text legible over any wallpaper, light enough that the blurred
+     content behind it still shows through. Much above 0.7 and the panel stops reading as glass
+     and simply looks like a solid dark surface. */
+  --glass-fill: rgba(20, 24, 38, 0.46);
+  --glass-fill-strong: rgba(20, 24, 38, 0.56);
+  --glass-border: rgba(255, 255, 255, 0.16);
+
+  /* A bright top edge sells the thickness of the pane. */
+  --glass-edge: inset 0 1px 0 rgba(255, 255, 255, 0.10);
+  --glass-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .glass {
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  }
+}
+
+/*
+ * When the platform cannot blur, the fill has to carry the surface on its own: a translucent panel
+ * over an unknown wallpaper would leave text unreadable.
+ */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass { --glass-fill: rgba(20, 24, 36, 0.94); }
+}
+
+/* ------------------------------------------------------------------ settings */
+
+.settings-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 380px;
+
+  display: flex;
+  flex-direction: column;
+  background: var(--glass-fill-strong);
+  border-left: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow), var(--glass-edge);
+
+  transform: translateX(100%);
+  transition: transform 240ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  z-index: 1000;
+}
+
+.settings-panel[data-open="yes"] { transform: translateX(0); }
+
+.settings-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 24px 16px;
+}
+
+.settings-head h2 { margin: 0; font-size: 19px; font-weight: 600; }
+
+.settings-close {
+  border: 0;
+  background: none;
+  color: var(--fg-dim);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 8px;
+}
+
+.settings-close:hover { background: #ffffff14; color: var(--fg); }
+
+.settings-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 4px 24px 24px;
+}
+
+.settings-note { color: var(--fg-dim); font-size: 14px; }
+
+/* ------------------------------------------------------------------ sections */
+
+.settings-section { margin-bottom: 26px; }
+
+.settings-section h3 {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+.settings-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+/*
+ * For rows with more than two buttons, which need to wrap rather than shrink.
+ *
+ * Four buttons on one line in a 380px panel leaves each too narrow for its label, and a label that
+ * cannot fit wraps to one character per line. The buttons keep a sensible minimum and wrap onto
+ * another row instead of being squeezed.
+ */
+.settings-row-wrap {
+  flex-wrap: wrap;
+}
+
+.settings-row-wrap button {
+  flex: 1 1 auto;
+  min-width: 7.5em;
+  white-space: nowrap;
+}
+
+.settings-row button {
+  flex: 1 1 0;
+  padding: 10px 14px;
+  border-radius: 11px;
+  border: 1px solid transparent;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+
+  /* A cramped button must wrap onto the next row, never break its own label across lines. */
+  white-space: nowrap;
+}
+
+.settings-row button.ghost {
+  background: transparent;
+  border-color: #ffffff26;
+  color: var(--fg);
+}
+
+.settings-row button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.settings-row button:hover:not(:disabled) { filter: brightness(1.1); }
+
+.settings-hint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.65;
+  color: #7c869c;
+}
+
+.settings-path {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: #00000038;
+  font-size: 11px;
+  word-break: break-all;
+  color: var(--fg-dim);
+}
+
+.settings-divider {
+  height: 1px;
+  margin: 0 0 22px;
+  background: #ffffff12;
+}
+
+/* ------------------------------------------------------------------ backup list */
+
+.backup-list { display: flex; flex-direction: column; gap: 8px; }
+
+.backup-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: #ffffff0a;
+  font-size: 13px;
+  color: var(--fg-dim);
+}
+
+.backup-item button {
+  flex: 0 0 auto;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid #ffffff26;
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.backup-item button:hover:not(:disabled) { background: #ffffff14; }
+.backup-item button:disabled { opacity: 0.5; cursor: default; }
+
+.setting {
+  display: block;
+  margin-bottom: 20px;
+}
+
+.setting-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.setting-head output {
+  color: var(--fg-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.setting input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.setting-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 14px;
+}
+
+.setting-toggle input { accent-color: var(--accent); width: 18px; height: 18px; }
+
+.settings-foot {
+  padding: 16px 24px 24px;
+  border-top: 1px solid #ffffff10;
+}
+
+.settings-foot button {
+  width: 100%;
+  padding: 11px;
+  border-radius: 12px;
+  border: 1px solid #ffffff26;
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  cursor: pointer;
+}
+
+.settings-foot button:hover { background: #ffffff12; }
+
+/* ------------------------------------------------------------------ confirm dialog */
+
+/*
+ * The backdrop is a light scrim and deliberately not blurred.
+ *
+ * Blurring the full screen overlay blurs the entire desktop behind it, which reads as the whole
+ * launcher going out of focus rather than as a pane of glass sitting on top of it. The blur belongs
+ * on the box alone.
+ */
+.confirm {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+
+  display: grid;
+  place-items: center;
+  background: rgba(5, 7, 12, 0.28);
+}
+
+.confirm[hidden] { display: none; }
+
+.confirm-box {
+  min-width: 380px;
+  padding: 30px 34px;
+  border-radius: 20px;
+  background: var(--glass-fill-strong);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow), var(--glass-edge);
+  text-align: center;
+
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+}
+
+.confirm-box h2 { margin: 0 0 8px; font-size: 20px; font-weight: 600; }
+.confirm-box p { margin: 0 0 24px; color: var(--fg-dim); font-size: 14px; }
+
+.confirm-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.confirm-actions button {
+  min-width: 120px;
+  padding: 11px 20px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: #e5484d;
+  color: #fff;
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.confirm-actions button.ghost {
+  background: transparent;
+  border-color: #ffffff26;
+  color: var(--fg);
+}
+
+.confirm-actions button:hover { filter: brightness(1.1); }
+
+/* The focused button in the top bar gets the same ring the TV cards use, so the focus is always
+   visible wherever it is. */
+.focus-ring {
+  outline: 4px solid #4c8dff;
+  outline-offset: 3px;
+  border-radius: 12px;
+}
+
+/* ------------------------------------------------------------------ context menu */
+
+/*
+ * The right-click menu.
+ *
+ * Slightly more opaque than the panels: it sits directly over a card the user is looking at, and a
+ * busy picture behind it would make the items hard to read at this size.
+ */
+.context-menu {
+  position: fixed;
+  z-index: 4000;
+  min-width: 180px;
+  padding: 6px;
+
+  background: rgba(22, 26, 40, 0.72);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  box-shadow: var(--glass-shadow), var(--glass-edge);
+
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+
+  /* Fades and lifts into place rather than appearing instantly. */
+  opacity: 0;
+  transform: translateY(-6px) scale(0.97);
+  transition: opacity 130ms var(--ease-out), transform 130ms var(--ease-spring);
+}
+
+.context-menu[data-open="yes"] {
+  opacity: 1;
+  transform: none;
+}
+
+.context-item {
+  display: block;
+  width: 100%;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.context-item:hover:not(:disabled) { background: #ffffff14; }
+.context-item:disabled { color: #5d6577; cursor: default; }
+
+.context-separator {
+  height: 1px;
+  margin: 5px 8px;
+  background: #ffffff12;
+}
+
+/* ------------------------------------------------------------------ picture picker */
+
+/* The same scrim and the same pane as the confirmation, so the two dialogs feel like one material.
+   As there, only the box is blurred: blurring the full screen overlay would take the whole
+   launcher out of focus instead of placing a pane of glass on top of it. */
+.picker {
+  position: fixed;
+  inset: 0;
+  z-index: 3500;
+
+  display: grid;
+  place-items: center;
+  background: rgba(5, 7, 12, 0.28);
+}
+
+.picker-box {
+  width: min(900px, 88vw);
+  max-height: 82vh;
+
+  display: flex;
+  flex-direction: column;
+  background: var(--glass-fill-strong);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  box-shadow: var(--glass-shadow), var(--glass-edge);
+  overflow: hidden;
+
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+}
+
+.picker-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 14px;
+  border-bottom: 1px solid #ffffff10;
+}
+
+.picker-head h2 { margin: 0; font-size: 18px; font-weight: 600; }
+
+/* ------------------------------------------------------------------ picker tabs */
+
+.picker-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 0 24px 12px;
+}
+
+.picker-tabs[hidden] { display: none; }
+
+.picker-tabs button {
+  padding: 8px 20px;
+  border: 0;
+  border-radius: 10px;
+  background: #ffffff10;
+  color: var(--fg-dim);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.picker-tabs button[data-active="yes"] {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* ------------------------------------------------------------------ colour picker */
+
+.colour-layout {
+  display: flex;
+  gap: 28px;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 8px 0 4px;
+}
+
+#colour-wheel {
+  width: 300px;
+  height: 300px;
+  flex: 0 0 auto;
+  cursor: crosshair;
+  /* The wheel is drawn on canvas, so it must not be scaled by the browser's layout rounding. */
+  image-rendering: auto;
+}
+
+.colour-side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 200px;
+}
+
+.colour-preview {
+  height: 84px;
+  border-radius: 14px;
+  border: 1px solid #ffffff26;
+  box-shadow: inset 0 0 0 1px #00000033;
+}
+
+.colour-readout {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  color: var(--fg-dim);
+}
+
+.colour-readout input {
+  flex: 1 1 auto;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid #ffffff26;
+  background: #0d1017;
+  color: var(--fg);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  text-transform: lowercase;
+}
+
+.colour-readout input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/*
+ * Brightness and saturation as sliders as well as inside the wheel's square.
+ *
+ * The square is small on screen, and a slider is far easier to land on with a mouse and will be
+ * reachable with a remote's arrow keys.
+ */
+.colour-slider {
+  display: grid;
+  grid-template-columns: 42px 1fr 44px;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--fg-dim);
+}
+
+.colour-slider input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.colour-slider output {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.colour-swatches {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.colour-swatch {
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid #ffffff26;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 120ms var(--ease-out);
+}
+
+.colour-swatch:hover { transform: scale(1.08); }
+
+.picker-close {
+  border: 0;
+  background: none;
+  color: var(--fg-dim);
+  font-size: 17px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.picker-close:hover { background: #ffffff14; color: var(--fg); }
+
+.picker-body { flex: 1 1 auto; overflow-y: auto; padding: 20px 24px; }
+
+.picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 16px;
+}
+
+.picker-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* Marks a video entry, which cannot show a still thumbnail of its own. */
+.picker-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.62);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1.6;
+  pointer-events: none;
+}
+
+.picker-item video {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 12px;
+  background: #ffffff12;
+  border: 2px solid transparent;
+  transition: transform 140ms var(--ease-out), border-color 140ms var(--ease-out);
+}
+
+.picker-item:hover video {
+  transform: translateY(-2px) scale(1.03);
+  border-color: var(--accent);
+}
+
+.picker-item img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 12px;
+  background: #ffffff12;
+  border: 2px solid transparent;
+  transition: transform 140ms var(--ease-out), border-color 140ms var(--ease-out);
+}
+
+.picker-item:hover img {
+  transform: translateY(-2px) scale(1.03);
+  border-color: var(--accent);
+}
+
+.picker-item span {
+  font-size: 12px;
+  color: var(--fg-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.picker-empty {
+  margin: 0;
+  padding: 40px 0;
+  text-align: center;
+  line-height: 1.8;
+  color: var(--fg-dim);
+  font-size: 14px;
+}
+
+.picker-foot {
+  display: flex;
+  gap: 12px;
+  padding: 16px 24px 20px;
+  border-top: 1px solid #ffffff10;
+}
+
+.picker-foot button {
+  flex: 1 1 0;
+  padding: 11px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.picker-foot button.ghost {
+  background: transparent;
+  border-color: #ffffff26;
+  color: var(--fg);
+}
+
+.picker-foot button:hover { filter: brightness(1.1); }

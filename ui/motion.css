@@ -1,0 +1,200 @@
+/*
+ * Shared motion.
+ *
+ * All of it is CSS: transform and opacity only, so the compositor runs the animation without
+ * touching layout. The durations and curves live here as custom properties so every surface moves
+ * with the same rhythm instead of each screen inventing its own.
+ */
+
+:root {
+  /* A slight overshoot is what makes a movement read as springy rather than mechanical. */
+  --ease-spring: cubic-bezier(0.34, 1.42, 0.42, 1);
+  --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
+
+  --dur-fast: 140ms;
+  --dur-base: 260ms;
+  --dur-slow: 420ms;
+}
+
+/* ------------------------------------------------------------------ wallpaper */
+
+.wallpaper {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.wallpaper-image,
+.wallpaper-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+
+  /* Fading between wallpapers beats a hard cut. */
+  opacity: 0;
+  transition: opacity var(--dur-slow) var(--ease-out);
+}
+
+.wallpaper[data-kind="image"] .wallpaper-image,
+.wallpaper[data-kind="video"] .wallpaper-video {
+  opacity: 1;
+}
+
+/* A wash over the wallpaper so white text stays readable on a bright photo. */
+.wallpaper::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    rgba(6, 8, 16, 0.55) 0%,
+    rgba(6, 8, 16, 0.25) 35%,
+    rgba(6, 8, 16, 0.45) 100%);
+  opacity: 0;
+  transition: opacity var(--dur-slow) var(--ease-out);
+}
+
+.wallpaper[data-kind="image"]::after,
+.wallpaper[data-kind="video"]::after {
+  opacity: 1;
+}
+
+/* Everything else sits above the wallpaper. */
+body > .topbar,
+body > .stage,
+body > .hint {
+  position: relative;
+  z-index: 1;
+}
+
+/* ------------------------------------------------------------------ mode swipe */
+
+/*
+ * Switching between the two modes by dragging the stage.
+ *
+ * While the pointer is down the stage follows it directly, with no transition, so the screen stays
+ * under the cursor. Releasing either completes the move or springs back, and the transition is what
+ * carries it the rest of the way.
+ */
+.stage {
+  will-change: transform, opacity;
+}
+
+.stage[data-swiping="yes"] {
+  transition: none;
+}
+
+.stage[data-swiping="settle"] {
+  transition: transform 320ms var(--ease-out), opacity 320ms var(--ease-out);
+}
+
+/*
+ * A running animation overrides the inline transform, so the entrance animation has to be cancelled
+ * for the duration of a swipe.
+ *
+ * The grid's entrance animation is attached to the stage, and an animation takes precedence over the
+ * transform property — including one set inline. Leaving it in place meant the drag moved nothing on
+ * screen in the grid, which read as the gesture not working at all. The TV mode has no such
+ * animation, which is why only that direction appeared broken.
+ */
+.stage[data-swiping] {
+  animation: none;
+}
+
+/* The tablet rides in from the right as the TV stage slides away, so the two read as one motion. */
+.stage[data-mode="tablet"]:not([data-swiping]) {
+  animation: mode-enter-tablet 340ms var(--ease-out) both;
+}
+
+@keyframes mode-enter-tablet {
+  from {
+    opacity: 0;
+    transform: translateX(6%) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ------------------------------------------------------------------ tile press */
+
+@keyframes tile-enter {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/*
+ * The press feedback: the plate dips, then springs back with a slight overshoot.
+ *
+ * It is applied to the plate rather than the whole tile, and it sets animation-delay explicitly to
+ * zero. The entrance animation uses an inline animation-delay for its stagger, and because
+ * animation-delay is not reset by the animation shorthand, the press animation was inheriting that
+ * delay: pressing a tile did nothing visible for up to half a second.
+ */
+@keyframes tile-press {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(0.88); }
+  70%  { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
+.app-tile.tile-press .app-plate,
+.tv-card.tile-press .tv-glyph {
+  animation: tile-press 420ms var(--ease-out) 0ms both;
+}
+
+/* The plate's hover transition would otherwise interpolate against the running animation. */
+.app-tile.tile-press .app-plate {
+  transition: none;
+}
+
+/* ------------------------------------------------------------------ page flip */
+
+/*
+ * The track moves as one piece. Widths are percentages of the page, so this works at any width
+ * without measuring anything in JS.
+ */
+.tablet-track {
+  transition: transform var(--dur-base) var(--ease-out);
+}
+
+/* A page that is not the current one is inert, so a stray click cannot launch a card from a page
+   the user cannot see. */
+.tablet-grid[data-active="no"] {
+  pointer-events: none;
+}
+
+/* ------------------------------------------------------------------ app entry */
+
+/*
+ * Cards fade and rise into place. The stagger is set per card from JS as an animation-delay.
+ *
+ * Only the grid uses the blanket rule: a TV card changes the app behind it as the focus moves, and
+ * animating all five on every step would make the row shimmer instead of gliding.
+ */
+.app-tile {
+  animation: tile-enter var(--dur-base) var(--ease-spring) backwards;
+}
+
+/* ------------------------------------------------------------------ respect the user */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}

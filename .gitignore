@@ -1,0 +1,22 @@
+# Build output
+# The publish output is large and reproducible; the installer is attached to a release instead of
+# being committed, so neither belongs in the repository.
+bin/
+obj/
+dist/
+
+# Installer output
+installer/*.exe
+
+# Debug symbols from a local publish
+*.pdb
+
+# Visual Studio and Rider
+.vs/
+.idea/
+*.user
+*.suo
+
+# OS clutter
+Thumbs.db
+desktop.ini

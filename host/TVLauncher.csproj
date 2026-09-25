@@ -1,0 +1,61 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>TVLauncher</AssemblyName>
+    <RootNamespace>TVLauncher.Host</RootNamespace>
+
+    <!-- Published self-contained for win-x64: this machine has no machine-wide .NET runtime, and a
+         launcher you double-click must not ask the user to install one. Single file keeps the
+         deliverable to one exe; the UI folder stays beside it so the interface can be edited
+         without rebuilding. -->
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <PublishTrimmed>false</PublishTrimmed>
+
+    <!-- The launcher icon, carried over from the previous build so the taskbar, the window and the
+         desktop shortcut all show the same artwork. -->
+    <ApplicationIcon>Resources\TVLauncher.ico</ApplicationIcon>
+
+    <!-- Shown in the file's properties, in Add or Remove Programs, and in the installer. One place
+         to change so the version cannot disagree between them. -->
+    <Version>1.0.0</Version>
+    <Product>TVLauncher</Product>
+    <AssemblyTitle>TVLauncher</AssemblyTitle>
+    <Description>Windows 桌面启动器，提供 TV 封面流与平板网格两种模式</Description>
+    <Company>TVLauncher</Company>
+    <Copyright>Copyright © 2026</Copyright>
+
+    <!-- The UI lives in ui\ as plain HTML/CSS/JS and is copied next to the exe, so changing the
+         interface never requires recompiling the host. -->
+    <EnableDefaultNoneItems>false</EnableDefaultNoneItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2903.40" />
+  </ItemGroup>
+
+  <!-- The WebView2 package also ships a WPF control, which drags in a second WindowsBase and
+       produces an assembly conflict. This host is Windows Forms only, so the WPF assemblies are
+       excluded. -->
+  <ItemGroup>
+    <Reference Remove="Microsoft.Web.WebView2.Wpf" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\ui\**\*" CopyToOutputDirectory="PreserveNewest" LinkBase="ui" />
+  </ItemGroup>
+
+  <!-- Embedded in the executable and used as the window icon at runtime. -->
+  <ItemGroup>
+    <Resource Include="Resources\TVLauncher.ico" />
+  </ItemGroup>
+
+</Project>

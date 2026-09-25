@@ -1,0 +1,190 @@
+/*
+ * TV mode.
+ *
+ * The cards are absolutely positioned siblings inside one stacking context, so z-index alone
+ * decides what paints on top. That is the property the WPF version could not provide.
+ *
+ * Placement is "translateX + scale" written by JS. Both live in the same transform, so moving and
+ * resizing happen as one composited operation: the card visibly travels from the side into the
+ * centre while growing.
+ *
+ * The horizontal centring is NOT part of that transform. It is done with left/translate so an
+ * animation on the transform can never displace the card's origin.
+ */
+
+.tv-row {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+
+  /* Vertical placement of the whole card group, as a percentage of the row's height. Driven by the
+     settings slider so the group can be nudged up or down; 50% is dead centre. */
+  --group-y: 50%;
+}
+
+.tv-card {
+  position: absolute;
+
+  /* Centre the card's box horizontally on the row's midpoint, and place it vertically at the
+     group position the settings ask for. `translate` is a separate property from `transform`, so
+     the JS-driven transform cannot clobber either offset. */
+  top: var(--group-y, 50%);
+  left: 50%;
+  translate: -50% -50%;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0;
+  border: 0;
+  border-radius: var(--tv-radius, 28px);
+  background: #ffffff;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+
+  /* The whole move: position and size together, with a slight overshoot at the end so the card
+     settles into place instead of stopping dead. */
+  transition: transform var(--dur-slow) var(--ease-spring);
+
+  transform-origin: center center;
+  will-change: transform;
+}
+
+/* Placement with no animation. Applied by the initial layout and by settings changes, so the row
+   does not slide when the geometry is merely being established. */
+.tv-row[data-instant="yes"] .tv-card {
+  transition: none;
+}
+
+.tv-card[data-empty="yes"] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* The focused card is the only one with a ring: depth is already conveyed by size and order. When
+   the focus has moved up into the top bar the ring is muted, so it is obvious which control Enter
+   would activate. */
+.tv-card.is-focused {
+  outline: 5px solid #4c8dff;
+  outline-offset: -5px;
+}
+
+.tv-row[data-content-focused="no"] .tv-card.is-focused {
+  outline-color: #ffffff33;
+}
+
+.tv-card:not(.is-focused):hover {
+  filter: brightness(0.96);
+}
+
+/*
+ * The custom artwork layer.
+ *
+ * It covers the card but sits behind the icon, so the two are independent: a card can have a
+ * picture, a different icon, both, or neither. The white plate stays underneath either way, which
+ * matters because an icon with a transparent background needs something to sit on.
+ */
+.tv-card-art {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+
+  /* Hidden unless the card actually has artwork. */
+  display: none;
+}
+
+.tv-card[data-has-art="yes"] .tv-card-art {
+  display: block;
+}
+
+/*
+ * A faint darkening so a bright picture never swallows the icon on top of it.
+ *
+ * Only for pictures: a flat colour was chosen deliberately and shading it would make the card a
+ * different colour from the one the user picked.
+ */
+.tv-card[data-has-art="yes"]:not([data-has-colour="yes"]) .tv-card-art::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.18) 0%,
+    rgba(0, 0, 0, 0.05) 45%,
+    rgba(0, 0, 0, 0.28) 100%);
+}
+
+/* The icon sits above the artwork. */
+.tv-glyph {
+  position: relative;
+  z-index: 1;
+
+  display: grid;
+  place-items: center;
+  color: #4a5568;
+  font-weight: 600;
+}
+
+.tv-glyph img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.tv-card.is-broken {
+  opacity: 0.45;
+}
+
+/* ------------------------------------------------------------------ caption */
+
+/*
+ * The name under the card group.
+ *
+ * Its position is a pixel value computed in JS from the group position, the card height and the
+ * user's own offset. Doing it in JS avoids mixing a percentage and a pixel value inside calc(),
+ * where the two would resolve against different references.
+ */
+.tv-caption {
+  /* Positioned against the row, the same element the card positions are measured in, so the pixel
+     value JS writes means the same thing on both sides. */
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: var(--caption-top, 60%);
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+
+  font-size: var(--caption-size, 26px);
+  font-weight: 600;
+  color: #ffffff;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+
+  /* No transition: this follows a slider, and a transition would lag behind the drag. */
+  transition: none;
+}
+
+.tv-name-label,
+.tv-counter {
+  display: block;
+  line-height: 1.3;
+  white-space: nowrap;
+  max-width: 80vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tv-counter {
+  font-size: 0.55em;
+  font-weight: 400;
+  color: #ffffffa6;
+}
