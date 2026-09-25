@@ -2,7 +2,7 @@
 
 <img src="docs/images/logo.jpg" width="180" alt="TVLauncher">
 
-# TVLauncher
+# WinTV-Launcher
 
 **把 Windows 桌面变成一个能用遥控器操作的电视**
 
