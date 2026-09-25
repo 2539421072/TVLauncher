@@ -129,7 +129,7 @@ TVLauncher 是一个 Windows 桌面启动器。它不像普通程序那样以窗
 
 ### 下载安装包（推荐）
 
-从 [Releases](../../releases) 下载 `TVLauncher-Setup-1.0.0.exe`，双击安装。
+从 [发布](../../releases) 下载 `TVLauncher-Setup-1.0.0.exe`，双击安装。
 
 安装过程**不需要管理员权限**——程序装在自己的用户目录里，卸载时也清理得干净。
 
@@ -317,7 +317,10 @@ TVLauncher2/
 
 <div align="center">
 
-<img src="docs/images/06-user-screenshot.png" width="100%" alt="搭配 TranslucentTB 透明任务栏的实际效果">
+<img src="docs/images/6735baf2c53832224480e568e2023884.png" width="100%"
+  alt="搭配 TranslucentTB 透明任务栏的实际效果">
+<img src="docs/images/bed720afe165f9e51ba04b4657cdbafb.png" width="100%"  
+  alt="搭配 TranslucentTB 透明任务栏的实际效果">
 
 *搭配 [TranslucentTB](https://github.com/TranslucentTB/TranslucentTB) 等工具把任务栏透明化，壁纸可以通到屏幕边缘，观感更完整（上图任务栏在屏幕左侧）*
 
