@@ -317,11 +317,11 @@ TVLauncher2/
 
 <div align="center">
 
-<img src="docs/images/6735baf2c53832224480e568e2023884.png" width="100%"
+<img src="docs/images/d3e0ed9ddab6e1231fce05a02d339432.png" width="100%"
   alt="搭配 TranslucentTB 透明任务栏的实际效果">
 <img src="docs/images/bed720afe165f9e51ba04b4657cdbafb.png" width="100%"  
   alt="搭配 TranslucentTB 透明任务栏的实际效果">
 
-*搭配 [TranslucentTB](https://github.com/TranslucentTB/TranslucentTB) 等工具把任务栏透明化，壁纸可以通到屏幕边缘，观感更完整（上图任务栏在屏幕左侧）*
+*搭配 [TranslucentTB](https://github.com/TranslucentTB/TranslucentTB) 等工具把任务栏透明化，壁纸可以通到屏幕边缘，观感更完整
 
 </div>
